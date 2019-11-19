@@ -1,10 +1,11 @@
 import numpy as np
 import json
-from sklearn.linear_model import Lasso, LassoCV
+from sklearn.linear_model import Lasso, LassoCV, LinearRegression
 from sklearn.model_selection import cross_validate
 import random
 import time
 
+EPS = 1e-30
 def read_gene_expression(datafile):
   f = open(datafile, 'r')
   i = 0
@@ -28,9 +29,37 @@ def read_gene_expression(datafile):
   print('Num. of conditions: %d' % len(condition_names))
 
   return gene_names, np.array(X)
-  
+
+def predict_with_random_network(X, p, file_prefix='random_network_predicted_expression'):
+  n_c, n_g = X.shape
+  model = LinearRegression() 
+  pccs = [] 
+  r2_scores = []
+  X_predict = np.zeros(X.shape)
+  for i in range(n_g):
+    begin_time = time.time()
+    edges_i = []
+    while len(edges_i) == 0: 
+      edges_i = [j for j in range(n_g) if random.random()<=p and j != i]
+    model.fit(X[:, edges_i], X[:, i])
+    X_predict[:, i] = model.predict(X[:, edges_i]) 
+    r2_score = model.score(X[:, edges_i], X[:, i])
+    pccs.append(pearson_correlation_coefficient(X_predict[:, i], X[:, i]))
+    r2_scores.append(r2_score)
+    print('Take %.5f s to process gene %d' % (time.time() - begin_time, i)) 
+
+  print('Average Pearson Coefficient: ', np.mean(pccs))
+  np.savez(file_prefix+'.npz', X_predict)
+  with open(file_prefix+'_pcc.json', 'w') as f:
+    json.dump(pccs, f, indent=4, sort_keys=True)
+  return np.mean(pccs), np.mean(r2_scores)
+
+# TODO
+def pearson_correlation_coefficient(x, y):
+  return x @ y / max(np.linalg.norm(x, ord=2) * np.linalg.norm(y, ord=2), EPS)
+
 if __name__ == '__main__':
-  task = 0
+  task = [0, 1]
   #-----------# 
   # Read Data #
   #-----------#  
@@ -42,7 +71,7 @@ if __name__ == '__main__':
   #-------------------------------#
   # Model training and prediction #
   #-------------------------------#
-  if task == 0:
+  if 0 in task:
     #model = LassoCV()
     alpha = 0.05
     model = Lasso(alpha=alpha)
@@ -51,6 +80,7 @@ if __name__ == '__main__':
     edge_weights = []
     r2_scores = []
     avg_r2_score = 0.
+    avg_pcc_score = 0.
     for i in range(n_g):
       begin_time = time.time()
       js_neq_i = [j for j in range(n_g) if j != i]
@@ -59,26 +89,54 @@ if __name__ == '__main__':
       #print(weights_i)
       edge_weights.append([(j, w) for j, w in enumerate(weights_i.tolist()) if w != 0])
       X_predict[:, i] = model.predict(X[:, js_neq_i])
+      pcc = pearson_correlation_coefficient(X_predict[:, i], X[:, i]) 
       r2_score = model.score(X[:, js_neq_i], X[:, i])
-      r2_scores.append(' '.join([str(i), str(r2_score), names[i]]))
+      
+      r2_scores.append(' '.join([str(i), names[i], str(r2_score)]))
       avg_r2_score += r2_score
+      avg_pcc_score += pcc
       print('Takes %.5f s to train on gene %d' % (time.time()-begin_time, i))
       
     avg_r2_score /= n_g
+    avg_pcc_score /= n_g
     with open('edge_weights.json', 'w') as f:
       json.dump(edge_weights, f, indent=4, sort_keys=True)
 
     np.savez('predicted_expression.npz', X_predict)
-    with open('r2_scores.json', 'w') as f:
+    with open('r2_scores.txt', 'w') as f:
       f.write('\n'.join(r2_scores))
     
     print('average R2 score: %.1f' % avg_r2_score)
+    print('average PCC score: %.1f' % avg_pcc_score)
 
+
+  #---------------------------#
+  # Random network prediction #
+  #---------------------------#
+  if 1 in task:
+    p = 3802. / 114. * 537. / (5661. * 5660. / 2) # TODO: find the right ratio  
+    print('connect an edge with probability: %.5f' % p)
+    rep = 5
+    avg_pcc = 0.
+    avg_r2 = 0. 
+    for r in range(rep):
+      avg_pcc_r, avg_r2_r = predict_with_random_network(X, p, file_prefix='random_%d' % r)
+      avg_pcc += avg_pcc_r
+      avg_r2 += avg_r2_r
+
+    print('Overall average R2 score for the random network: %.5f' % (avg_r2 / rep)) 
+    print('Overall average PCC score for the random network: %.5f' % (avg_pcc / rep))
+  
   #------------#
   # Evaluation #
   #------------#
-  if task == 1:
+  if 2 in task:
     # R^2 score on validation set
+    f = open('r2_scores.txt')
+    r2_scores = []
+    for line in f:
+      r2_scores.append(float(line.split()[1]))
+    print(np.mean(r2_scores)) 
     # Correlation score
     # TODO: AUROC, AUPR
     print   
