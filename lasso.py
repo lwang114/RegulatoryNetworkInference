@@ -140,3 +140,22 @@ if __name__ == '__main__':
     # Correlation score
     # TODO: AUROC, AUPR
     print   
+    
+  #------------#
+  # AUROC CURVE #
+  #------------#
+  if 3 in task:
+# X are the predicted labels    
+# Y and Z are the true labels
+  Y = open('D:\\wittney2\\CS_598\\gold_standard\\MacIsaac2.NatVar')    
+  y_true = Y
+  y_probs = X
+  fpr, tpr, thresholds = metrics.roc_curve(y_true, y_probs, pos_label=0)
+
+# Print ROC curve
+   plt.plot(fpr,tpr)
+   plt.show() 
+
+# Print AUC
+   auc = np.trapz(tpr,fpr)
+   print('AUC:', auc)
