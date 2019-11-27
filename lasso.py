@@ -2,8 +2,10 @@ import numpy as np
 import json
 from sklearn.linear_model import Lasso, LassoCV, LinearRegression
 from sklearn.model_selection import cross_validate
+from sklearn.metrics import roc_curve, precision_recall_curve, average_precision_score
 import random
 import time
+import matplotlib.pyplot as plt
 
 EPS = 1e-30
 def read_gene_expression(datafile):
@@ -48,22 +50,23 @@ def predict_with_random_network(X, p, file_prefix='random_network_predicted_expr
     r2_scores.append(r2_score)
     print('Take %.5f s to process gene %d' % (time.time() - begin_time, i)) 
 
-  print('Average Pearson Coefficient: ', np.mean(pccs))
+  print('Average Pearson Coefficient by the random network: ', np.mean(pccs))
   np.savez(file_prefix+'.npz', X_predict)
   with open(file_prefix+'_pcc.json', 'w') as f:
     json.dump(pccs, f, indent=4, sort_keys=True)
   return np.mean(pccs), np.mean(r2_scores)
 
-# TODO
 def pearson_correlation_coefficient(x, y):
   return x @ y / max(np.linalg.norm(x, ord=2) * np.linalg.norm(y, ord=2), EPS)
 
 if __name__ == '__main__':
-  task = [0, 1]
+  task = [0, 2]
   #-----------# 
   # Read Data #
   #-----------#  
+  exp_dir = 'inferred_lasso/'
   datafile = '../merlin-p_inferred_networks/yeast_networks/expression/NatVar.txt'  
+  gold_network_file = '../merlin-p_inferred_networks/yeast_networks/gold/MacIsaac2.NatVar.txt'  
   names, X = read_gene_expression(datafile) 
   X = np.asfortranarray(X.T)
   n_g = X.shape[-1]
@@ -99,11 +102,26 @@ if __name__ == '__main__':
       
     avg_r2_score /= n_g
     avg_pcc_score /= n_g
-    with open('edge_weights.json', 'w') as f:
+    with open(exp_dir+'edge_weights.json', 'w') as f:
       json.dump(edge_weights, f, indent=4, sort_keys=True)
+    
+    predict_network = []
+    # TODO: try different definition of the edge probabilities
+    for i, w_i in enumerate(edge_weights):
+      for j, w_ij in w_i:
+        prob = 1  
+        for k, w_jk in edge_weights[j]:
+          if k == i and w_jk >= w_ij:
+            prob = w_ij / (w_jk + w_ij)
+            break
+              
+        predict_network.append(' '.join([names[i], names[j], str(prob)]))  
 
-    np.savez('predicted_expression.npz', X_predict)
-    with open('r2_scores.txt', 'w') as f:
+    with open(exp_dir+'predicted_network.txt', 'w') as f:
+      f.write('\n'.join(predict_network))
+    
+    np.savez(exp_dir+'predicted_expression.npz', X_predict)
+    with open(exp_dir+'r2_scores.txt', 'w') as f:
       f.write('\n'.join(r2_scores))
     
     print('average R2 score: %.1f' % avg_r2_score)
@@ -132,30 +150,74 @@ if __name__ == '__main__':
   #------------#
   if 2 in task:
     # R^2 score on validation set
-    f = open('r2_scores.txt')
+    f = open(exp_dir+'r2_scores.txt')
     r2_scores = []
     for line in f:
-      r2_scores.append(float(line.split()[1]))
-    print(np.mean(r2_scores)) 
+      r2_scores.append(float(line.split()[-1]))
+    f.close()
+    print('Average R2 score of LASSO: ', np.mean(r2_scores)) 
     # Correlation score
-    # TODO: AUROC, AUPR
-    print   
     
-  #------------#
-  # AUROC CURVE #
-  #------------#
-  if 3 in task:
-# X are the predicted labels    
-# Y and Z are the true labels
-  Y = open('D:\\wittney2\\CS_598\\gold_standard\\MacIsaac2.NatVar')    
-  y_true = Y
-  y_probs = X
-  fpr, tpr, thresholds = metrics.roc_curve(y_true, y_probs, pos_label=0)
+    pred_edge_dict = {}
+    f = open(exp_dir+'predicted_network.txt')
+    for line in f:
+      parts = line.split()
+      g1, g2, prob = parts[0], parts[1], parts[2]
+      pred_edge_dict[g1+'_'+g2] = float(prob)
+    f.close()
+    # y_probs are the predicted probabilities of the label to be 1    
+    y_probs = []
+    y_true = [] 
+    # y_true are the true labels
+   
+    gold_network_genes = []
+    gold_edge_dict = {}
+    f = open(gold_network_file)    
+    i = 0
+    for line in f:
+      # XXX
+      if i > 10:
+        break
+      i += 1
+      parts = line.split()
+      g1, g2 = parts[0], parts[1]
+      gold_network_genes += [g1, g2]
+      gold_edge_dict[g1+'_'+g2] = 1
+    f.close()
 
-# Print ROC curve
-   plt.plot(fpr,tpr)
-   plt.show() 
+    for g1 in gold_network_genes:
+      for g2 in gold_network_genes:
+        eKey = g1+'_'+g2
+        # Check the probability of the edge in the predicted network
+        if eKey in gold_edge_dict:
+          y_true.append(1)  
+        else:
+          y_true.append(0)
+            
+        if eKey in pred_edge_dict:
+          y_probs.append(pred_edge_dict[eKey])
+        else:
+          y_probs.append(0)
+        
+    # XXX
+    fpr, tpr, thresholds = roc_curve(y_true, y_probs, pos_label=1)
+    # Print ROC curve
+    plt.plot(fpr,tpr)
+    plt.show() 
+    plt.title('ROC curve for LASSO')
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
 
-# Print AUC
-   auc = np.trapz(tpr,fpr)
-   print('AUC:', auc)
+    prec, recall, _ = precision_recall_curve(y_true, y_probs)  
+    # Plot PR curve
+    plt.plot(recall, prec) 
+    plt.show() 
+    plt.title('PR curve for LASSO')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+
+    # Print AUC
+    auc = np.trapz(tpr, fpr)
+    print('AUC:', auc)   
+    ap = average_precision_score(y_true, y_probs)
+    print('Average precision: ', ap)
