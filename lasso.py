@@ -221,3 +221,17 @@ if __name__ == '__main__':
     print('AUC:', auc)   
     ap = average_precision_score(y_true, y_probs)
     print('Average precision: ', ap)
+    
+  #------------#
+  # Evaluation #
+  #------------#
+  #not completed
+  if 3 in task:
+  
+  #model = LogisticResgression
+  logreg = LogisticRegression()
+  #need to define features
+  # fit the model with data
+  logreg.fit(X_train,y_train)
+#
+  y_pred=logreg.predict(X_test)
