@@ -22,3 +22,5 @@ predicted = model.predict(X_test)
 probs = model.predict_proba(X_test)
 
 #rough draft
+#i believe this is a cross validation of a random data set
+scores = cross_val_score(LogisticRegression(penalty='l2', C=0.2), xx.T, Y, scoring='accuracy', cv=10)
