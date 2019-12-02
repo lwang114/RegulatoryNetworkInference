@@ -20,3 +20,5 @@ model.fit(X_train, y_train)
 # Apply the model on the test set
 predicted = model.predict(X_test)
 probs = model.predict_proba(X_test)
+
+#rough draft
