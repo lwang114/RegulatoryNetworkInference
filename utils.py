@@ -123,7 +123,7 @@ def extract_expression_given_set(expression_file, set_file, out_file_prefix=''):
   np.save(out_file_prefix+'expressions', np.array(X_set))
 
 if __name__ == '__main__':
-  tasks = [0, 2]
+  tasks = [0, 1, 2]
   datafile = '../merlin-p_inferred_networks/yeast_networks/expression/NatVar.txt'  
   network_file = '../merlin-p_inferred_networks/yeast_networks/gold/MacIsaac2.NatVar.txt'  
   if 0 in tasks:
