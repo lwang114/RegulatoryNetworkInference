@@ -6,6 +6,7 @@ from sklearn.metrics import roc_curve, precision_recall_curve, average_precision
 import random
 import time
 import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor
 
 EPS = 1e-30
 def read_gene_expression(datafile):
@@ -228,10 +229,14 @@ if __name__ == '__main__':
   #not completed
   if 3 in task:
   
-  #model = LogisticResgression
-  logreg = LogisticRegression()
-  #need to define features
-  # fit the model with data
-  logreg.fit(X_train,y_train)
-#
-  y_pred=logreg.predict(X_test)
+#need to understand variables to input above
+#will incorporate non-linear relationships
+
+model = RandomForestRegressor()
+model.fit(X_train, Y_train)
+expected = ________.target
+predicted = model.predict(______.data)
+print "Random Forest model"
+print "Mean squared error = %0.3f" % mse(expected, predicted)
+print "R2 score = %0.3f" % r2_score(expected, predicted)
+
