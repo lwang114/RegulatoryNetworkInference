@@ -33,6 +33,10 @@ def read_gene_expression(datafile):
 
   return gene_names, np.array(X)
 
+# 
+# Prediction with a random network created by choosing each edge independently with a fixed probability 
+# p is the fixed probability set for each edges 
+#associations are placed at random network 
 def predict_with_random_network(X, p, file_prefix='random_network_predicted_expression'):
   n_c, n_g = X.shape
   model = LinearRegression() 
@@ -56,7 +60,7 @@ def predict_with_random_network(X, p, file_prefix='random_network_predicted_expr
   with open(file_prefix+'_pcc.json', 'w') as f:
     json.dump(pccs, f, indent=4, sort_keys=True)
   return np.mean(pccs), np.mean(r2_scores)
-
+#
 def pearson_correlation_coefficient(x, y):
   return x @ y / max(np.linalg.norm(x, ord=2) * np.linalg.norm(y, ord=2), EPS)
 
