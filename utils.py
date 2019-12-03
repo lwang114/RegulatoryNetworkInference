@@ -4,7 +4,8 @@ from sklearn.metrics import roc_curve, precision_recall_curve, average_precision
 import random
 import time
 import matplotlib.pyplot as plt
-
+#this script contains all the data to extract a part of the dataset.
+#reading the dataset to a array for python format
 EPS = 1e-30
 def read_gene_expression(datafile):
   f = open(datafile, 'r')
@@ -29,6 +30,11 @@ def read_gene_expression(datafile):
   print('Num. of conditions: %d' % len(condition_names))
 
   return gene_names, np.array(X)
+#returns arrays and the names of the genes in a list 
+#
+
+#pearson correlation coffefficient pair of gene expressions
+#pearson correlation coefficient based on predicted and true expression
 
 def pearson_correlation_coefficient(x, y):
   return x @ y / max(np.linalg.norm(x, ord=2) * np.linalg.norm(y, ord=2), EPS)
@@ -84,7 +90,8 @@ def generate_sythesize_data(tf_names, target_names, p, file_prefix=''):
   with open(file_prefix+'random_network.txt', 'w') as f:
     f.write('\n'.join(network))
 '''
-
+#the overlap from target genes and target regulators
+#genes can be regulators and targets this indentifies those genes
 def find_overlap_target_regulator(network_file, out_prefix=''):
   f = open(network_file, 'r')
   regulators, targets = [], []
@@ -109,6 +116,9 @@ def find_overlap_target_regulator(network_file, out_prefix=''):
   print('Percent of intersection for TF: ', float(n_overlap) / len(regulators))
   print('Percent of intersection: ', float(n_overlap) / float(n_tot))
 
+  # this extracts two sets of expression for TFs and targets from the gold networks
+  #match only the TFs that are in the gold network
+  #algorithm assist in identifying the TFs from the gold network
 def extract_expression_given_set(expression_file, set_file, out_file_prefix=''):
   gene_names, X = read_gene_expression(expression_file)
   with open(set_file, 'r') as f:
