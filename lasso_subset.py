@@ -1,3 +1,5 @@
+#subset of gene expression from the gold network to train a small subset and evaluate
+#saves time
 import numpy as np
 import json
 from sklearn.linear_model import Lasso, LassoCV, LinearRegression
