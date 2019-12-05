@@ -30,7 +30,7 @@ def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=
   avg_r2_score = 0.
   avg_pcc_score = 0.
   # XXX
-  n_trg = 100
+  #n_trg = 100
   for i in range(n_trg):
     begin_time = time.time()
     js_neq_i = [j for j in range(n_tf) if j != i and pearson_correlation_coefficient(X_target[:, i], X_tf[:, j]) != 1.]
@@ -71,7 +71,7 @@ def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=
   print('average PCC score: %0.1f' % avg_pcc_score)
  
 if __name__ == '__main__':
-  task = [2]
+  task = [1, 2, 3]
   #-----------# 
   # Read Data #
   #-----------#
@@ -97,14 +97,28 @@ if __name__ == '__main__':
   # Model training and prediction #
   #-------------------------------#
   if 0 in task:
+    alpha = 0.00001 
     #model = LassoCV()
-    alpha = 0.00001
     lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
-     
+  if 1 in task:
+    exp_dir = 'inferred_lasso_given_tf_target_combined/'
+    alpha = 0.00001
+    target_datafiles = ['data/target_stress_expressions.npy', 'data/target_KO_expressions.npy']
+    tf_datafiles = ['data/tf_stress_expressions.npy', 'data/tf_KO_expressions.npy']
+    for trg_file, tf_file in zip(target_datafiles, tf_datafiles):
+      X_tf_1 = np.asfortranarray(np.load(tf_file).T)
+      X_trg_1 = np.asfortranarray(np.load(trg_file).T)
+      
+      X_tf = np.concatenate([X_tf, X_tf_1])
+      X_target = np.concatenate([X_target, X_trg_1])
+    
+    print('X_tf.shape: ', X_tf.shape)   
+    lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
+  
   #------------#
   # Evaluation #
   #------------#
-  if 1 in task:    
+  if 2 in task:    
     edge_based_metrics(exp_dir, gold_network_file)
-  if 2 in task:
+  if 3 in task:
     gene_based_metrics(exp_dir, gold_network_file, tf_names, target_names) 
