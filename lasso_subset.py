@@ -11,6 +11,14 @@ import matplotlib.pyplot as plt
 from utils import read_gene_expression, pearson_correlation_coefficient
 from evaluate import *
 
+# For each gene in the target set, run a LASSO regression to determine a subset of the TF set to be potential TFs for the gene;
+# X_tf: the gene expressions for the TF genes;
+# tf_names: names of the TFs;
+# X_target: the gene expressions for the target genes;
+# target_names: names of the targets;
+# the coefficients of LASSO are used as confidence score for the regulatory relations;
+# the prediction performance is evaluated based on average R2 score and PCC score between the groundtruth 
+# expressions and the true expressions across all genes    
 def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=30000):
   n_tf = X_tf.shape[1]
   n_trg = X_target.shape[1]
