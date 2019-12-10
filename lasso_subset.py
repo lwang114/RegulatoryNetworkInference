@@ -71,12 +71,14 @@ def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=
   print('average PCC score: %0.1f' % avg_pcc_score)
  
 if __name__ == '__main__':
-  task = [1, 2, 3]
+  task = [2, 3]
   #-----------# 
   # Read Data #
   #-----------#
   # XXX
-  exp_dir = 'inferred_lasso_given_tf_target/' 
+  #exp_dir = 'inferred_lasso_given_tf_target/' 
+  exp_dir = 'inferred_lasso_given_tf_target_combined/'
+    
   target_datafile = 'data/target_expressions.npy'
   target_name_file = 'data/targets.txt'
   tf_datafile = 'data/tf_expressions.npy'
@@ -101,7 +103,6 @@ if __name__ == '__main__':
     #model = LassoCV()
     lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
   if 1 in task:
-    exp_dir = 'inferred_lasso_given_tf_target_combined/'
     alpha = 0.00001
     target_datafiles = ['data/target_stress_expressions.npy', 'data/target_KO_expressions.npy']
     tf_datafiles = ['data/tf_stress_expressions.npy', 'data/tf_KO_expressions.npy']
@@ -114,7 +115,8 @@ if __name__ == '__main__':
     
     print('X_tf.shape: ', X_tf.shape)   
     lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
-  
+  if
+    
   #------------#
   # Evaluation #
   #------------#
