@@ -39,5 +39,6 @@ plt.ylim([0.0, 1.0])
 plt.xlabel('1-Specificity(False Positive Rate)')
 plt.ylabel('Sensitivity(True Positive Rate)')
 plt.title('Receiver Operating Characteristic')
-plt.legend(loc="lower right")
+plt.legend(loc="lower right", label = c('GENIE3','inferelator', 'LARSEN', 'MERLIN', 'MERLIN + prior','PGG', 'PGG + prior', 'TIGRESS', 'LASSO + prior', 
+                                       'baseline', 'LASSO + prior')
 plt.show()
