@@ -7,6 +7,9 @@ plt.figure()
 #"Baseline", "GENIE3", "inferelator", "LARSEN", "MERLIN", "MERLIN + prior","PGG", "PGG + prior", "TIGRESS", "LASSO + prior"
 #define models based on files
 
+gold_standard = 'merlin-p_inferred_networks/yeast_networks/gold/YEASTRACT_Count3.NatVar'
+
+
 model1 = '../merlin-p_inferred_networks/yeast_networks/inferred_networks/GENIE3.NatVar.txt'  
 model2 = '../merlin-p_inferred_networks/yeast_networks/inferred_networks/Inferelator.NatVar.txt' 
 model3 = '../merlin-p_inferred_networks/yeast_networks/inferred_networks/LARSEN.NatVar.txt' 
@@ -18,7 +21,7 @@ model8 = '../merlin-p_inferred_networks/yeast_networks/inferred_networks/TIGRESS
 #baseline model
 model9 =  '../predicted_network_Nat_Var.txt'
 #need include model with prior information
-model10 =
+model10 = '../predicted_network_Nat_Var_prior.txt'
 #put models in a list
 models = [c(model1, model2,model3, model4, model5, model6, model7, model8, model9, model10)]
 
