@@ -125,3 +125,4 @@ if __name__ == '__main__':
     edge_based_metrics(exp_dir, gold_network_file)
   if 3 in task:
     gene_based_metrics(exp_dir, gold_network_file, tf_names, target_names, top_num_edges=30000) 
+#run 1 and 3
