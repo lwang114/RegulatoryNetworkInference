@@ -8,7 +8,7 @@ from sklearn.metrics import roc_curve, precision_recall_curve, average_precision
 import random
 import time
 import matplotlib.pyplot as plt
-from utils import read_gene_expression, pearson_correlation_coefficient
+from utils import read_gene_expression, pearson_correlation_coefficient, mean_var_normalize
 from evaluate import *
 import argparse
 
@@ -20,10 +20,12 @@ import argparse
 # the coefficients of LASSO are used as confidence score for the regulatory relations;
 # the prediction performance is evaluated based on average R2 score and PCC score between the groundtruth 
 # expressions and the true expressions across all genes    
-def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=30000):
+def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=None, cross_val_ratio=None, debug=False):
   n_tf = X_tf.shape[1]
   n_trg = X_target.shape[1]
   model = Lasso(alpha=alpha)
+  d = X_tf.shape[0]
+  assert X_tf.shape[0] == X_target.shape[0]
     
   X_predict = np.nan * np.ones(X_target.shape)
   edge_weights = []
@@ -37,12 +39,30 @@ def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=
     js_neq_i = [j for j in range(n_tf) if j != i and pearson_correlation_coefficient(X_target[:, i], X_tf[:, j]) != 1.]
     model.fit(X_tf[:, js_neq_i], X_target[:, i])  
     weights_i = model.coef_
-    print(weights_i.shape)
+    #print(weights_i.shape)
     edge_weights.append([(j, w) for j, w in zip(js_neq_i, weights_i.tolist()) if w != 0])
-    X_predict[:, i] = model.predict(X_tf[:, js_neq_i])
-    pcc = pearson_correlation_coefficient(X_predict[:, i], X_target[:, i]) 
-    r2_score = model.score(X_tf[:, js_neq_i], X_target[:, i])
+    pcc, r2_score = None, None
+    if not cross_val_ratio:
+      r2_score = model.score(X_tf[:, js_neq_i], X_target[:, i])
+      pcc = pearson_correlation_coefficient(X_predict[:, i], X_target[:, i]) 
+      X_predict[:, i] = model.predict(X_tf[:, js_neq_i])
+
+    else:    
+      cross_val_indices = np.random.permutation(d)[int(d*cross_val_ratio):]
+      remain_indices = np.asarray([k for k in range(d) if k not in cross_val_indices.tolist()])
+      
+      if debug:
+        print(X_tf.shape, X_target.shape)
+        #print(int(d*cross_val_ratio)) 
+        #print(remain_indices)
+        #print(X_tf[cross_val_indices[:, None], np.asarray(js_neq_i)[None, :]].shape, X_target[cross_val_indices[:, None], i].shape)   
+      model.fit(X_tf[remain_indices[:, None], np.asarray(js_neq_i)[None, :]], X_target[remain_indices, i])
+      X_predict[cross_val_indices, i] = model.predict(X_tf[cross_val_indices[:, None], np.asarray(js_neq_i)[None, :]])
+      r2_score = model.score(X_tf[cross_val_indices[:, None], np.asarray(js_neq_i)[None, :]], X_target[cross_val_indices, i])
+      pcc = pearson_correlation_coefficient(X_predict[cross_val_indices, i], X_target[cross_val_indices, i]) 
     r2_scores.append('\t'.join([str(i), target_names[i], str(r2_score)]))
+    if debug:
+      print(r2_score)
     avg_r2_score += r2_score
     avg_pcc_score += pcc
     print('Takes %.5f s to train on gene %d' % (time.time()-begin_time, i))
@@ -71,13 +91,14 @@ def lasso_GRN(X_tf, X_target, tf_names, target_names, alpha=0.01, max_num_edges=
   print('average PCC score: %0.1f' % avg_pcc_score)
  
 if __name__ == '__main__':
-  task = [3]
+  task = [1, 3]
   #-----------# 
   # Read Data #
   #-----------#
   parser = argparse.ArgumentParser()
   parser.add_argument('--exp_dir', type=str, default='./', help='Experimental directory') 
   parser.add_argument('--alpha', type=float, default=1., help='Regularization coefficient')
+  parser.add_argument('--cross_validate_ratio', type=float, default=None, help='Cross validate ratio')
   args = parser.parse_args()
   # XXX
   exp_dir = args.exp_dir
@@ -95,6 +116,11 @@ if __name__ == '__main__':
   X_tf = np.asfortranarray(X_tf.T)
   
   X_target = np.load(target_datafile) 
+  
+  # Normalize X_tf and X_target
+  X_tf = mean_var_normalize(X_tf)
+  X_target = mean_var_normalize(X_target)
+
   with open(target_name_file, 'r') as f:
     target_names = f.read().strip().split('\n') 
   X_target = np.asfortranarray(X_target.T) 
@@ -105,7 +131,7 @@ if __name__ == '__main__':
   if 0 in task: 
     #model = LassoCV()
     lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
-  if 1 in task:
+  if 1 in task: 
     target_datafiles = ['data/target_stress_expressions.npy', 'data/target_KO_expressions.npy']
     tf_datafiles = ['data/tf_stress_expressions.npy', 'data/tf_KO_expressions.npy']
     for trg_file, tf_file in zip(target_datafiles, tf_datafiles):
@@ -115,14 +141,15 @@ if __name__ == '__main__':
       X_tf = np.concatenate([X_tf, X_tf_1])
       X_target = np.concatenate([X_target, X_trg_1])
     
-    print('X_tf.shape: ', X_tf.shape)   
-    lasso_GRN(X_tf, X_target, tf_names, target_names, alpha)
-    
+    d = X_tf.shape[0]
+   
+    #print('X_tf.shape: ', X_tf.shape)   
+    lasso_GRN(X_tf, X_target, tf_names, target_names, alpha, cross_val_ratio=args.cross_validate_ratio, debug=False)
+   
   #------------#
   # Evaluation #
   #------------#
   if 2 in task:    
     edge_based_metrics(exp_dir, gold_network_file)
   if 3 in task:
-    gene_based_metrics(exp_dir, gold_network_file, tf_names, target_names, top_num_edges=30000) 
-#run 1 and 3
+    gene_based_metrics(exp_dir, gold_network_file, tf_names, target_names, top_num_edges=None) 
